@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantina Online - Produtos do Vendedor</title>
+    <link rel="stylesheet" href="/src/main/resources/static/style.css">
+</head>
+<body>
+    <header style="padding-bottom: 3%;">
+        <div class="logo">Cantina Online - Área do Vendedor</div>
+        <div class="vendedor-info">
+            Olá, <span id="vendedor-nome">Administrador</span>
+        </div>
+        <div style="position: absolute; right: 20px; top: 15px;">
+            <button class="theme-toggle" onclick="toggleDarkMode()" style="margin-right: 10px; top: 0px">🌙</button>
+            <button class="btn btn-secondary" onclick="fazerLogout()" style="padding: 5px 10px; font-size: 14px;">Sair</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Seus Produtos</h2>
+            
+            <div class="product-grid" id="vendedor-products-grid">
+                <!-- Produtos do vendedor serão carregados aqui via JavaScript -->
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <a href="adicionarProdutos.html" class="btn btn-primary">Adicionar Produto</a>
+                <a href="vendedor.html" class="btn btn-secondary">Voltar</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/src/main/resources/static/app.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    if (!verificarAutenticacao()) {
+        alert('Você precisa fazer login para acessar esta área.');
+    } else {
+        carregarNomeVendedor(); 
+    }
+});
+    </script>
+</body>
+</html>

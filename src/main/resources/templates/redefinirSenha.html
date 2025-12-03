@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Redefinir Senha</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+    <div class="container">
+        <h1>Redefinir Senha - Etapa 2</h1>
+        <p>Responda às suas perguntas de segurança e defina uma nova senha.</p>
+
+        <div th:if="${error}" class="error-message">
+            <p th:text="${error}"></p>
+        </div>
+
+        <form th:action="@{/auth/redefinir-senha}" method="post">
+            <input type="hidden" name="vendedorId" th:value="${vendedorId}" />
+
+            <div class="form-group">
+                <label th:text="${pergunta1}"></label>
+                <input type="text" name="resposta1" required>
+            </div>
+            <div class="form-group">
+                <label th:text="${pergunta2}"></label>
+                <input type="text" name="resposta2" required>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="novaSenha">Nova Senha:</label>
+                <input type="password" id="novaSenha" name="novaSenha" required>
+            </div>
+            <button type="submit">Redefinir Senha</button>
+        </form>
+        <a th:href="@{/auth/login}" class="back-link">Cancelar e Voltar para o Login</a>
+    </div>
+</body>
+</html>

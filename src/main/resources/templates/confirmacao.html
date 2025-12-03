@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantina Online - Confirmação</title>
+    <link rel="stylesheet" href="/src/main/resources/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">Cantina Online</div>
+        <button class="theme-toggle" onclick="toggleDarkMode()">🌙</button>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Pedido Confirmado!</h2>
+            
+            <div class="confirmation-code" id="order-code">
+                <!-- Código do pedido será gerado aqui -->
+            </div>
+            
+            <div class="qr-code">
+                <div class="qr-placeholder">QR Code</div>
+                <p>Apresente este código para retirar seu pedido</p>
+            </div>
+            
+            <div id="order-summary">
+                <!-- Resumo do pedido será exibido aqui -->
+            </div>
+            
+            <a href="index.html" class="btn btn-primary">Voltar ao Início</a>
+        </div>
+    </div>
+
+    <script src="/src/main/resources/static/app.js"></script>
+    <script>
+
+function limparAposConfirmacao() {
+    // Já foi limpo no processPayment, só redirecionar
+    window.location.href = 'index.html';
+}
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const orderCode = localStorage.getItem('lastOrderCode');
+            const orderSummary = localStorage.getItem('lastOrderSummary');
+            
+            if (orderCode && orderSummary) {
+                document.getElementById('order-code').textContent = orderCode;
+                document.getElementById('order-summary').innerHTML = orderSummary;
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

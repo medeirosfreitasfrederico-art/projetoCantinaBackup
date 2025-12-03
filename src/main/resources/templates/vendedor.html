@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantina Online - Vendedor</title>
+    <link rel="stylesheet" href="/src/main/resources/static/style.css">
+</head>
+<body>
+    <header style="padding-bottom: 3%;">
+        <div class="logo">Cantina Online - Área do Vendedor</div>
+        <div class="vendedor-info">
+            Olá, <span id="vendedor-nome">Administrador</span>
+        </div>
+        <div style="position: absolute; right: 20px; top: 15px;">
+            <button class="theme-toggle" onclick="toggleDarkMode()" style="margin-right: 10px; top: 0px">🌙</button>
+            <button class="btn btn-secondary" onclick="fazerLogout()" style="padding: 5px 10px; font-size: 14px;">Sair</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Gerenciamento da Loja</h2>
+            
+            <div class="main-menu">
+                <!-- ✅ LINK DO ADMIN - AGORA DEVE APARECER -->
+                <a href="admin.html" class="btn btn-primary" id="admin-link" style="display: none;">Administração</a>
+                <a href="gerenciarProdutos.html" class="btn btn-primary">Gerenciar Produtos</a>
+                <a href="pedidos.html" class="btn btn-secondary">Ver Pedidos</a>
+                <a href="index.html" class="btn btn-secondary">Voltar ao Início</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/src/main/resources/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!verificarAutenticacao()) {
+                alert('Você precisa fazer login para acessar esta área.');
+            } else {
+                carregarNomeVendedor();
+                // ✅ ADICIONAR: Verificar se é admin quando a página carregar
+                verificarEhAdmin();
+            }
+        });
+    </script>
+</body>
+</html>

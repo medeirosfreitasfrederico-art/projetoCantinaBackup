@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantina Online - Administração</title>
+    <link rel="stylesheet" href="/src/main/resources/static/style.css">
+</head>
+<body>
+    <header style="padding-bottom: 3%;">
+        <div class="logo">Cantina Online - Área Administrativa</div>
+        <div class="vendedor-info">
+            Olá, <span id="admin-nome">Administrador</span>
+        </div>
+        <div style="position: absolute; right: 20px; top: 15px;">
+            <button class="theme-toggle" onclick="toggleDarkMode()" style="margin-right: 10px; top: 0px">🌙</button>
+            <button class="btn btn-secondary" onclick="fazerLogout()" style="padding: 5px 10px; font-size: 14px;">Sair</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Validação de Vendedores</h2>
+            <p>Contas pendentes de validação:</p>
+            
+            <div id="vendedores-pendentes">
+                <div class="loading">Carregando vendedores pendentes...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Todos os Vendedores</h2>
+            
+            <div id="todos-vendedores">
+                <div class="loading">Carregando todos os vendedores...</div>
+            </div>
+        </div>
+        
+        <a href="vendedor.html" class="btn btn-secondary">Voltar</a>
+    </div>
+
+    <script src="/src/main/resources/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!verificarAutenticacao() || !verificarSeEhAdmin()) {
+                alert('Acesso restrito ao administrador.');
+                window.location.href = 'loginVendedor.html';
+            } else {
+                carregarNomeAdmin();
+                carregarVendedoresPendentes();
+                carregarTodosVendedores();
+            }
+        });
+
+        function verificarSeEhAdmin() {
+            const usuario = localStorage.getItem('vendedorNome');
+            return usuario === 'admin' || usuario === 'Administrador';
+        }
+
+        function carregarNomeAdmin() {
+            const nome = localStorage.getItem('vendedorNome');
+            if (nome) {
+                document.getElementById('admin-nome').textContent = nome;
+            }
+        }
+
+        async function carregarVendedoresPendentes() {
+            try {
+                const response = await fetch('http://localhost:8080/api/admin/vendedores/pendentes');
+                const vendedores = await response.json();
+                
+                const container = document.getElementById('vendedores-pendentes');
+                container.innerHTML = '';
+                
+                if (vendedores.length === 0) {
+                    container.innerHTML = '<p>Nenhum vendedor pendente de validação.</p>';
+                    return;
+                }
+                
+                vendedores.forEach(vendedor => {
+                    const card = document.createElement('div');
+                    card.className = 'order-item';
+                    card.innerHTML = `
+                        <div class="order-header">
+                            <div>
+                                <div class="order-customer"><strong>${vendedor.nome}</strong></div>
+                                <div class="order-code">Usuário: ${vendedor.usuario}</div>
+                                <div class="order-date">E-mail: ${vendedor.email}</div>
+                                <div class="order-method">CPF: ${vendedor.cpf}</div>
+                                <div class="order-method">Telefone: ${vendedor.telefone || 'Não informado'}</div>
+                            </div>
+                            <div class="order-status status-pending">
+                                Aguardando Validação
+                            </div>
+                        </div>
+                        <div class="order-actions">
+                            <button class="btn btn-primary" onclick="validarVendedor(${vendedor.id})">
+                                ✅ Validar Conta
+                            </button>
+                            <button class="btn btn-secondary" onclick="rejeitarVendedor(${vendedor.id})">
+                                ❌ Rejeitar
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar vendedores pendentes:', error);
+                document.getElementById('vendedores-pendentes').innerHTML = 
+                    '<p class="error">Erro ao carregar vendedores pendentes.</p>';
+            }
+        }
+
+        async function carregarTodosVendedores() {
+            try {
+                const response = await fetch('http://localhost:8080/api/admin/vendedores');
+                const vendedores = await response.json();
+                
+                const container = document.getElementById('todos-vendedores');
+                container.innerHTML = '';
+                
+                if (vendedores.length === 0) {
+                    container.innerHTML = '<p>Nenhum vendedor cadastrado.</p>';
+                    return;
+                }
+                
+                vendedores.forEach(vendedor => {
+                    const card = document.createElement('div');
+                    card.className = 'order-item';
+                    const status = vendedor.validado === 'SIM' ? 'status-completed' : 'status-pending';
+                    const statusText = vendedor.validado === 'SIM' ? 'Validado' : 'Pendente';
+                    
+                    card.innerHTML = `
+                        <div class="order-header">
+                            <div>
+                                <div class="order-customer"><strong>${vendedor.nome}</strong></div>
+                                <div class="order-code">Usuário: ${vendedor.usuario}</div>
+                                <div class="order-date">E-mail: ${vendedor.email}</div>
+                                <div class="order-status ${status}">${statusText}</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar todos os vendedores:', error);
+                document.getElementById('todos-vendedores').innerHTML = 
+                    '<p class="error">Erro ao carregar vendedores.</p>';
+            }
+        }
+
+        async function validarVendedor(vendedorId) {
+            if (!confirm('Deseja validar esta conta? O vendedor poderá acessar o sistema.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/admin/vendedores/${vendedorId}/validar`, {
+                    method: 'PUT'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Vendedor validado com sucesso!');
+                    carregarVendedoresPendentes();
+                    carregarTodosVendedores();
+                } else {
+                    alert('Erro ao validar vendedor: ' + data.message);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao validar vendedor:', error);
+                alert('Erro ao conectar com o servidor.');
+            }
+        }
+
+        async function rejeitarVendedor(vendedorId) {
+            if (!confirm('Deseja rejeitar e excluir esta conta? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/admin/vendedores/${vendedorId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Vendedor rejeitado com sucesso!');
+                    carregarVendedoresPendentes();
+                    carregarTodosVendedores();
+                } else {
+                    alert('Erro ao rejeitar vendedor: ' + data.message);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao rejeitar vendedor:', error);
+                alert('Erro ao conectar com o servidor.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantina Online - Pagamento PIX</title>
+    <link rel="stylesheet" href="/src/main/resources/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="logo">Cantina Online - Pagamento</div>
+        <button class="theme-toggle" onclick="toggleDarkMode()">🌙</button>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Pagamento via PIX</h2>
+            
+            <div id="loading" class="loading">Gerando QR Code PIX...</div>
+            
+            <div id="pagamento-content" style="display: none;">
+                <div class="qr-code">
+                    <img id="qr-code-image" src="" alt="QR Code PIX" style="width: 250px; height: 250px;">
+                    <p>Escaneie o QR Code com seu app bancário</p>
+                </div>
+                
+                <div class="confirmation-code">
+                    <p><strong>Código PIX (Copia e Cola):</strong></p>
+                    <div id="pix-code" style="background: #f5f5f5; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 12px; margin: 10px 0;"></div>
+                    <button onclick="copiarPixCode()" class="btn btn-secondary">📋 Copiar Código</button>
+                </div>
+                
+                <div id="status-pagamento">
+                    <div class="order-status status-pending" id="status-text">
+                        Aguardando pagamento...
+                    </div>
+                    <p id="expiracao-text" style="text-align: center; margin-top: 10px;"></p>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button onclick="verificarPagamento()" class="btn btn-primary">🔄 Verificar Pagamento</button>
+                    <a href="produtos.html" class="btn btn-secondary">Cancelar Pedido</a>
+                </div>
+            </div>
+            
+            <div id="error-message" style="display: none;" class="error">
+                Erro ao processar pagamento.
+            </div>
+        </div>
+    </div>
+
+    <script src="/src/main/resources/static/app.js"></script>
+    <script>
+        let pedidoId = null;
+        let intervaloVerificacao = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Pegar ID do pedido da URL ou do localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            pedidoId = urlParams.get('pedidoId') || localStorage.getItem('ultimoPedidoId');
+            
+            if (!pedidoId) {
+                mostrarErro('Pedido não encontrado.');
+                return;
+            }
+            
+            iniciarPagamentoPix();
+        });
+
+        async function iniciarPagamentoPix() {
+            try {
+                const response = await fetch('http://localhost:8080/api/pagamentos/pix/criar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pedidoId: parseInt(pedidoId)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Mostrar QR Code e informações
+                    document.getElementById('qr-code-image').src = data.qr_code;
+                    document.getElementById('pix-code').textContent = data.qr_code_text;
+                    
+                    // Formatar expiração
+                    const expiracao = new Date(data.expiracao).toLocaleString('pt-BR');
+                    document.getElementById('expiracao-text').textContent = `Válido até: ${expiracao}`;
+                    
+                    // Mostrar conteúdo e esconder loading
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('pagamento-content').style.display = 'block';
+                    
+                    // Iniciar verificação automática
+                    iniciarVerificacaoAutomatica();
+                    
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao criar pagamento:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error-message').style.display = 'block';
+                document.getElementById('error-message').textContent = 'Erro: ' + error.message;
+            }
+        }
+
+        async function verificarPagamento() {
+            try {
+                const response = await fetch(`http://localhost:8080/api/pagamentos/status/${pedidoId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.aprovado) {
+                        // Pagamento aprovado!
+                        document.getElementById('status-text').textContent = '✅ Pagamento Aprovado!';
+                        document.getElementById('status-text').className = 'order-status status-completed';
+                        
+                        showAlert('Pagamento confirmado! Redirecionando...', 'success');
+                        
+                        // Parar verificação automática
+                        if (intervaloVerificacao) {
+                            clearInterval(intervaloVerificacao);
+                        }
+                        
+                        // Redirecionar para confirmação
+                        setTimeout(() => {
+                            window.location.href = `confirmacao.html?pedidoId=${pedidoId}`;
+                        }, 2000);
+                        
+                    } else {
+                        // Ainda pendente
+                        document.getElementById('status-text').textContent = '⏳ Aguardando pagamento...';
+                        showAlert('Pagamento ainda não confirmado', 'info');
+                    }
+                } else {
+                    throw new Error(data.message);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao verificar pagamento:', error);
+                showAlert('Erro ao verificar pagamento', 'error');
+            }
+        }
+
+        function iniciarVerificacaoAutomatica() {
+            // Verificar a cada 10 segundos
+            intervaloVerificacao = setInterval(verificarPagamento, 10000);
+        }
+
+        function copiarPixCode() {
+            const pixCode = document.getElementById('pix-code').textContent;
+            navigator.clipboard.writeText(pixCode).then(() => {
+                showAlert('Código PIX copiado!', 'success');
+            }).catch(() => {
+                showAlert('Erro ao copiar código', 'error');
+            });
+        }
+
+        function mostrarErro(mensagem) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('error-message').textContent = mensagem;
+        }
+
+        // Parar verificação quando sair da página
+        window.addEventListener('beforeunload', function() {
+            if (intervaloVerificacao) {
+                clearInterval(intervaloVerificacao);
+            }
+        });
+    </script>
+</body>
+</html>

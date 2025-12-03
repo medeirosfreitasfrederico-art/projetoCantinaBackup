@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Verificar Status do Pedido</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+    <div class="container">
+        <h1>Verificar Status do Pedido</h1>
+        <form th:action="@{/pedidos/status}" method="get" class="form-status">
+            <input type="text" name="codigo" placeholder="Digite o código do seu pedido" required>
+            <button type="submit">Verificar</button>
+        </form>
+
+        <div th:if="${pedido}" class="status-result">
+            <h2>Detalhes do Pedido</h2>
+            <p><strong>Código:</strong> <span th:text="${pedido.codigo}"></span></p>
+            <p><strong>Cliente:</strong> <span th:text="${pedido.clienteNome}"></span></p>
+            <p><strong>Total:</strong> R$ <span th:text="${#numbers.formatDecimal(pedido.total, 1, 2, 'COMMA')}"></span></p>
+            <p><strong>Status:</strong> <span th:text="${pedido.status}"></span></p>
+            <p><strong>Data do Pedido:</strong> <span th:text="${#temporals.format(pedido.dataPedido, 'dd/MM/yyyy HH:mm')}"></span></p>
+        </div>
+
+        <div th:if="${error}" class="error-message">
+            <p th:text="${error}"></p>
+        </div>
+
+        <a th:href="@{/}" class="back-link">Voltar ao Início</a>
+    </div>
+</body>
+</html>

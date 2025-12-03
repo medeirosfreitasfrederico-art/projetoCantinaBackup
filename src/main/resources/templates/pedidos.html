@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cantina Online - Pedidos</title>
+    <link rel="stylesheet" href="/src/main/resources/static/style.css">
+</head>
+<body>
+    <header style="padding-bottom: 3%;">
+        <div class="logo">Cantina Online - Pedidos Recebidos</div>
+        <div class="vendedor-info">
+            Olá, <span id="vendedor-nome">Administrador</span>
+        </div>
+        <div style="position: absolute; right: 20px; top: 15px;">
+            <button class="theme-toggle" onclick="toggleDarkMode()" style="margin-right: 10px; top: 0px">🌙</button>
+            <button class="btn btn-secondary" onclick="fazerLogout()" style="padding: 5px 10px; font-size: 14px;">Sair</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <h2 style="margin: 0;" id="titulo-pedidos">
+                    Pedidos Ativos
+                </h2>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div class="pedidos-contador" id="contador-pedidos">
+                        🍕 <span id="total-pedidos">0</span> pedidos
+                    </div>
+                    <button class="btn btn-secondary" onclick="alternarFiltroPedidos()" id="btn-filtro">
+                        👁️ Ver Todos
+                    </button>
+                    <button class="btn btn-primary" onclick="carregarPedidosVendedor()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loading" class="loading" style="text-align: center; padding: 2rem;">
+                Carregando pedidos...
+            </div>
+            
+            <div id="pedidos-container" class="pedidos-container" style="display: none;">
+                <!-- Pedidos serão carregados aqui -->
+            </div>
+            
+            <div id="sem-pedidos" class="sem-pedidos" style="display: none;">
+                <h3>🎉 Nenhum pedido pendente!</h3>
+                <p>Todos os pedidos foram processados ou não há pedidos no momento.</p>
+            </div>
+            
+            <div style="margin-top: 2rem; text-align: center;">
+                <a href="vendedor.html" class="btn btn-secondary">← Voltar</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/src/main/resources/static/app.js"></script>
+    <script>
+        let mostrarApenasAtivos = true;
+    
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!verificarAutenticacao()) {
+                alert('Você precisa fazer login para acessar esta área.');
+                window.location.href = 'loginVendedor.html';
+            } else {
+                carregarNomeVendedor();
+                carregarPedidosVendedor();
+                
+                // Atualizar a cada 30 segundos
+                setInterval(carregarPedidosVendedor, 30000);
+            }
+        });
+    
+        async function carregarPedidosVendedor() {
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('pedidos-container');
+            const semPedidos = document.getElementById('sem-pedidos');
+            const contador = document.getElementById('total-pedidos');
+            const btnFiltro = document.getElementById('btn-filtro');
+            
+            try {
+                loading.style.display = 'block';
+                container.style.display = 'none';
+                semPedidos.style.display = 'none';
+                
+                // 🆕 CARREGAR PEDIDOS BASEADO NO FILTRO
+                const pedidos = mostrarApenasAtivos 
+                    ? await carregarPedidosAtivosDoBanco()
+                    : await carregarTodosPedidosDoBanco();
+                
+                loading.style.display = 'none';
+                
+                if (pedidos.length === 0) {
+                    semPedidos.style.display = 'block';
+                    contador.textContent = '0';
+                    return;
+                }
+                
+                // Atualizar contador
+                contador.textContent = pedidos.length;
+                
+                // Atualizar texto do botão de filtro
+                btnFiltro.textContent = mostrarApenasAtivos 
+                    ? '👁️ Ver Todos' 
+                    : '✅ Apenas Ativos';
+                
+                // Renderizar pedidos
+                container.innerHTML = '';
+                pedidos.forEach(pedido => {
+                    const pedidoElement = criarElementoPedido(pedido);
+                    container.appendChild(pedidoElement);
+                });
+                
+                container.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Erro ao carregar pedidos:', error);
+                loading.style.display = 'none';
+                container.innerHTML = `
+                    <div class="error" style="text-align: center; padding: 2rem;">
+                        <h3>❌ Erro ao carregar pedidos</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="carregarPedidosVendedor()">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
+                container.style.display = 'block';
+            }
+        }
+    
+        // 🆕 FUNÇÃO PARA ALTERNAR ENTRE "APENAS ATIVOS" E "VER TODOS"
+        function alternarFiltroPedidos() {
+            mostrarApenasAtivos = !mostrarApenasAtivos;
+            carregarPedidosVendedor();
+            
+            // Mostrar mensagem informativa
+            const mensagem = mostrarApenasAtivos 
+                ? 'Mostrando apenas pedidos ativos' 
+                : 'Mostrando todos os pedidos (incluindo entregues)';
+            showAlert(mensagem, 'info');
+        }
+    
+        function criarElementoPedido(pedido) {
+            const pedidoDiv = document.createElement('div');
+            pedidoDiv.className = 'pedido-item';
+            pedidoDiv.id = `pedido-${pedido.id}`;
+            
+            // Formatar data
+            const dataPedido = new Date(pedido.dataPedido).toLocaleString('pt-BR');
+            
+            // Calcular itens e total
+            let itemsHtml = '';
+            let totalItens = 0;
+            
+            if (pedido.itens && pedido.itens.length > 0) {
+                pedido.itens.forEach(item => {
+                    const itemTotal = item.precoUnitario * item.quantidade;
+                    totalItens += item.quantidade;
+                    itemsHtml += `
+                        <div class="item-pedido">
+                            <span class="item-quantidade">${item.quantidade}x</span>
+                            <span class="item-nome">${item.produto.nome}</span>
+                            <span class="item-preco">R$ ${itemTotal.toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Definir cor do status
+            const statusConfig = {
+                'PENDENTE': { class: 'status-pending', text: 'Pendente' },
+                'PREPARANDO': { class: 'status-preparing', text: 'Preparando' },
+                'PRONTO': { class: 'status-ready', text: 'Pronto' },
+                'ENTREGUE': { class: 'status-completed', text: 'Entregue' },
+                'CANCELADO': { class: 'status-cancelled', text: 'Cancelado' }
+            };
+            
+            const status = statusConfig[pedido.status] || statusConfig.PENDENTE;
+            
+            pedidoDiv.innerHTML = `
+                <div class="pedido-header">
+                    <div class="pedido-info">
+                        <div class="pedido-cliente">${pedido.clienteNome}</div>
+                        <div class="pedido-codigo">Pedido: ${pedido.codigo}</div>
+                        <div class="pedido-data">${dataPedido}</div>
+                        <div class="pedido-metodo">Pagamento: ${pedido.metodoPagamento || 'Não informado'}</div>
+                        <div class="pedido-metodo">Itens: ${totalItens}</div>
+                    </div>
+                    <div class="pedido-status ${status.class}">
+                        ${status.text}
+                    </div>
+                </div>
+                
+                ${itemsHtml ? `
+                <div class="pedido-itens">
+                    ${itemsHtml}
+                </div>
+                ` : ''}
+                
+                <div class="pedido-footer">
+                    <div class="pedido-total">
+                        Total: R$ ${pedido.total.toFixed(2)}
+                    </div>
+                    
+                    <div class="pedido-acoes">
+                        ${pedido.status === 'PENDENTE' ? 
+                            `<button class="btn btn-primary" onclick="atualizarStatusPedido(${pedido.id}, 'PREPARANDO')">
+                                👨‍🍳 Iniciar Preparo
+                            </button>` : ''}
+                        
+                        ${pedido.status === 'PREPARANDO' ? 
+                            `<button class="btn btn-success" onclick="atualizarStatusPedido(${pedido.id}, 'PRONTO')">
+                                ✅ Marcar como Pronto
+                            </button>` : ''}
+                        
+                        ${pedido.status === 'PRONTO' ? 
+                            `<button class="btn btn-completed" onclick="atualizarStatusPedido(${pedido.id}, 'ENTREGUE')">
+                                🎉 Marcar como Entregue
+                            </button>` : ''}
+                        
+                        ${pedido.status !== 'ENTREGUE' && pedido.status !== 'CANCELADO' ? 
+                            `<button class="btn btn-secondary" onclick="atualizarStatusPedido(${pedido.id}, 'CANCELADO')">
+                                ❌ Cancelar Pedido
+                            </button>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            return pedidoDiv;
+        }
+    </script>
+</body>
+</html>
